@@ -167,8 +167,8 @@ export class OpenCodeReasoningProcessor {
       id: randomUUID(),
     };
 
-    this.toolCallStarted = true;
     this.emit(toolCall);
+    this.toolCallStarted = true;
 
     logger.debug(`[OpenCodeReasoningProcessor] Started reasoning tool call: ${title}`);
   }
@@ -209,6 +209,11 @@ export class OpenCodeReasoningProcessor {
     // Don't emit reasoning messages during active tool calls
     // to avoid duplicate message streams
     if (this.toolCallStarted) {
+      return;
+    }
+
+    // Don't emit empty messages
+    if (!content) {
       return;
     }
 
