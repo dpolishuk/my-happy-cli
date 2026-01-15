@@ -238,6 +238,87 @@ import { execFileSync } from 'node:child_process'
       process.exit(1)
     }
     return;
+  } else if (subcommand === 'opencode') {
+    // Handle opencode subcommands
+    const opencodeSubcommand = args[1];
+    
+    // Handle "happy opencode model set <model>" command
+    if (opencodeSubcommand === 'model' && args[2] === 'set' && args[3]) {
+      const modelName = args[3];
+      const { isOpenCodeModelValid, saveOpenCodeModelToConfig, getAvailableOpenCodeModels } = await import('@/opencode/utils/config');
+      
+      if (!isOpenCodeModelValid(modelName)) {
+        console.error(`Invalid model: ${modelName}`);
+        console.error(getAvailableOpenCodeModels());
+        process.exit(1);
+      }
+      
+      try {
+        saveOpenCodeModelToConfig(modelName);
+        console.log(`✓ Model set to: ${modelName}`);
+        console.log(`  Config saved to: ~/.config/opencode/config.json`);
+        console.log(`  This model will be used in future sessions.`);
+        process.exit(0);
+      } catch (error) {
+        console.error('Failed to save model configuration:', error);
+        process.exit(1);
+      }
+    }
+    
+    // Handle "happy opencode model get" command
+    if (opencodeSubcommand === 'model' && args[2] === 'get') {
+      try {
+        const { readOpenCodeLocalConfig, getInitialOpenCodeModel } = await import('@/opencode/utils/config');
+        const localConfig = readOpenCodeLocalConfig();
+        
+        if (localConfig.model) {
+          console.log(`Current model: ${localConfig.model}`);
+        } else {
+          console.log(`Current model: ${getInitialOpenCodeModel()} (default)`);
+        }
+        process.exit(0);
+      } catch (error) {
+        console.error('Failed to read model configuration:', error);
+        process.exit(1);
+      }
+    }
+    
+    // Handle opencode command (ACP-based agent)
+    try {
+      const { runOpenCode } = await import('@/opencode/runOpenCode');
+      
+      // Parse startedBy argument
+      let startedBy: 'daemon' | 'terminal' | undefined = undefined;
+      for (let i = 1; i < args.length; i++) {
+        if (args[i] === '--started-by') {
+          startedBy = args[++i] as 'daemon' | 'terminal';
+        }
+      }
+      
+      const { credentials } = await authAndSetupMachineIfNeeded();
+      
+      // Auto-start daemon for opencode (same as claude)
+      logger.debug('Ensuring Happy background service is running & matches our version...');
+      if (!(await isDaemonRunningCurrentlyInstalledHappyVersion())) {
+        logger.debug('Starting Happy background service...');
+        const daemonProcess = spawnHappyCLI(['daemon', 'start-sync'], {
+          detached: true,
+          stdio: 'ignore',
+          env: process.env
+        });
+        daemonProcess.unref();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      await runOpenCode({credentials, startedBy});
+    } catch (error) {
+      console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
+      if (process.env.DEBUG) {
+        console.error(error)
+      }
+      process.exit(1)
+    }
+    return;
   } else if (subcommand === 'logout') {
     // Keep for backward compatibility - redirect to auth logout
     console.log(chalk.yellow('Note: "happy logout" is deprecated. Use "happy auth logout" instead.\n'));
@@ -444,20 +525,25 @@ ${chalk.bold('Usage:')}
   happy auth              Manage authentication
   happy codex             Start Codex mode
   happy gemini            Start Gemini mode (ACP)
+  happy opencode           Start OpenCode mode (ACP)
   happy connect           Connect AI vendor API keys
   happy notify            Send push notification
   happy daemon            Manage background service that allows
-                            to spawn new sessions away from your computer
+                             to spawn new sessions away from your computer
   happy doctor            System diagnostics & troubleshooting
 
 ${chalk.bold('Examples:')}
   happy                    Start session
   happy --yolo             Start with bypassing permissions
-                            happy sugar for --dangerously-skip-permissions
+                             happy sugar for --dangerously-skip-permissions
   happy --claude-env ANTHROPIC_BASE_URL=http://127.0.0.1:3456
-                           Use a custom API endpoint (e.g., claude-code-router)
+                            Use a custom API endpoint (e.g., claude-code-router)
   happy auth login --force Authenticate
   happy doctor             Run diagnostics
+  happy gemini model set gemini-2.5-pro
+                            Set Gemini model for ACP sessions
+  happy opencode model set claude-sonnet-4
+                            Set OpenCode model for ACP sessions
 
 ${chalk.bold('Happy supports ALL Claude options!')}
   Use any claude flag with happy as you would with claude. Our favorite:
