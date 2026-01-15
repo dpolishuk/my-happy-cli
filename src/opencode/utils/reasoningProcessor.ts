@@ -199,9 +199,16 @@ export class OpenCodeReasoningProcessor {
 
   /**
    * Emit a reasoning message for display
+   * Does not emit during active tool calls to avoid duplicate messages
    */
   private emitReasoningMessage(content: string): void {
     if (!this.onMessage) {
+      return;
+    }
+
+    // Don't emit reasoning messages during active tool calls
+    // to avoid duplicate message streams
+    if (this.toolCallStarted) {
       return;
     }
 
@@ -216,10 +223,21 @@ export class OpenCodeReasoningProcessor {
 
   /**
    * Emit a message to the callback
+   * Blocks tool-call and tool-call-result messages during active tool calls
+   * to prevent duplicate message streams
    */
   private emit(message: ReasoningOutput): void {
-    if (this.onMessage && !this.toolCallStarted) {
-      this.onMessage(message);
+    if (!this.onMessage) {
+      return;
     }
+
+    // Block tool-call and tool-call-result during active tool calls
+    // to prevent duplicate message streams
+    const isToolCall = message.type === 'tool-call' || message.type === 'tool-call-result';
+    if (this.toolCallStarted && isToolCall) {
+      return;
+    }
+
+    this.onMessage(message);
   }
 }

@@ -18,7 +18,7 @@ describe('OpenCodeReasoningProcessor', () => {
     processor.finishReasoning();
 
     expect(messages).toHaveLength(2);
-    expect(messages[0].type).toBe('tool-call');
+    expect(messages[0].type).toBe('reasoning');
     expect(messages[1].type).toBe('reasoning');
   });
 
@@ -30,7 +30,9 @@ describe('OpenCodeReasoningProcessor', () => {
     expect(messages[0]).toMatchObject({
       type: 'tool-call',
       name: 'CodexReasoning',
+      callId: expect.any(String),
       input: { title: 'Analysis' },
+      id: expect.any(String),
     });
   });
 });
