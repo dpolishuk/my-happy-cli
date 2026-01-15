@@ -8,5 +8,6 @@
  */
 
 export { AcpSdkBackend, type AcpSdkBackendOptions } from './AcpSdkBackend';
+export { createOpenCodeBackend, registerOpenCodeAgent, type OpenCodeBackendOptions } from './opencode';
 export { createGeminiBackend, registerGeminiAgent, type GeminiBackendOptions } from './gemini';
 
