@@ -269,6 +269,9 @@ export async function startDaemon(): Promise<void> {
           case 'gemini':
             agentCommand = 'gemini';
             break;
+          case 'opencode':
+            agentCommand = 'opencode';
+            break;
           default:
             return {
               type: 'error',
