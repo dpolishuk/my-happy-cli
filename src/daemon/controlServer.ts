@@ -71,17 +71,34 @@ export function startDaemonControlServer({
       }
     }, async () => {
       const children = getChildren();
-      logger.debug(`[CONTROL SERVER] Listing ${children.length} sessions`);
-      return { 
-        children: children
+
+      // Prune dead PIDs eagerly so `happy daemon list` doesn't show stale sessions.
+      // We do this at the control server layer so it works for any getChildren() impl.
+      const aliveChildren = children.filter((child) => {
+        try {
+          process.kill(child.pid, 0);
+          return true;
+        } catch {
+          // If a tracked PID is dead, ask the daemon to stop+untrack it.
+          // PID- prefix is supported by stopSession in daemon/run.ts.
+          stopSession(`PID-${child.pid}`);
+          return false;
+        }
+      });
+
+      logger.debug(`[CONTROL SERVER] Listing ${aliveChildren.length} sessions`);
+
+      return {
+        children: aliveChildren
           .filter(child => child.happySessionId !== undefined)
           .map(child => ({
             startedBy: child.startedBy,
             happySessionId: child.happySessionId!,
             pid: child.pid
           }))
-      }
+      };
     });
+
 
     // Stop specific session
     typed.post('/stop-session', {
@@ -97,6 +114,17 @@ export function startDaemonControlServer({
       }
     }, async (request) => {
       const { sessionId } = request.body;
+
+      // Opportunistically prune dead PIDs before acting on stop requests.
+      // This keeps state consistent even if clients never call /list.
+      const children = getChildren();
+      for (const child of children) {
+        try {
+          process.kill(child.pid, 0);
+        } catch {
+          stopSession(`PID-${child.pid}`);
+        }
+      }
 
       logger.debug(`[CONTROL SERVER] Stop session request: ${sessionId}`);
       const success = stopSession(sessionId);

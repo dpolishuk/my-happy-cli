@@ -29,3 +29,6 @@ pnpm-lock.yaml
 
 # npm auth token (never commit)
 .npmrc
+
+# bv (beads viewer) local config and caches
+.bv/

@@ -4,3 +4,6 @@
 
 # Default behavior for other text files (use platform line endings)
 * text=auto
+
+# Use bd merge for beads JSONL files
+.beads/issues.jsonl merge=beads
