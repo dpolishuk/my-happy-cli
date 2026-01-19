@@ -32,3 +32,6 @@ pnpm-lock.yaml
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# Local MCP config (may contain secrets)
+.mcp.json
