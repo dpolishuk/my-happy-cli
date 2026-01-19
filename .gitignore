@@ -35,3 +35,9 @@ pnpm-lock.yaml
 
 # Local MCP config (may contain secrets)
 .mcp.json
+
+# Local worktrees (can be huge)
+.worktrees/
+
+# Local backups
+src/api/apiSession.ts.bak
